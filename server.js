@@ -130,14 +130,35 @@ app.post("/api/users", async (req, res) => {
     });
   }
 });
+app.post("/api/sellers", async (req, res) => {
+  try {
+    const { ownerName, shopName, mobile, city } = req.body;
 
+    if (!ownerName || !shopName || !mobile) {
+      return res.status(400).json({
+        error: "ownerName, shopName and mobile are required"
+      });
+    }
 
-app.post("/api/sellers",(req,res)=>{
-  const {ownerName,shopName,mobile,city}=req.body;
-  if(!ownerName || !shopName || !mobile) return res.status(400).json({error:"ownerName, shopName and mobile are required"});
-  const seller={id:db.sellers.length+1,ownerName,shopName,mobile,city,status:"pending"};
-  db.sellers.push(seller); res.status(201).json(seller);
+    const result = await pool.query(
+      `INSERT INTO sellers (owner_name, shop_name, mobile, city)
+       VALUES ($1, $2, $3, $4)
+       RETURNING id, owner_name, shop_name, mobile, city, status, created_at`,
+      [ownerName, shopName, mobile, city || null]
+    );
+
+    res.status(201).json(result.rows[0]);
+
+  } catch (error) {
+    console.error("Seller creation error:", error.message);
+
+    res.status(500).json({
+      error: "Failed to create seller"
+    });
+  }
 });
+
+
 
 app.post("/api/products",(req,res)=>{
   const {name,price,stock,sellerId,category}=req.body;
