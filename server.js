@@ -116,6 +116,47 @@ app.get("/api/db-test", async (req, res) => {
 app.get("/api/products",(req,res)=>res.json(db.products));
 app.post("/api/users", async (req, res) => {
   try {
+    const { name, mobile, password, role = "customer" } = req.body;
+
+    if (!name || !mobile || !password) {
+      return res.status(400).json({
+        error: "name, mobile and password are required"
+      });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({
+        error: "password must be at least 6 characters"
+      });
+    }
+
+    const bcrypt = require("bcryptjs");
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    const result = await pool.query(
+      `INSERT INTO users (name, mobile, password_hash, role)
+       VALUES ($1, $2, $3, $4)
+       RETURNING id, name, mobile, role, created_at`,
+      [name, mobile, passwordHash, role]
+    );
+
+    res.status(201).json(result.rows[0]);
+
+  } catch (error) {
+    console.error("User registration error:", error.message);
+
+    if (error.code === "23505") {
+      return res.status(409).json({
+        error: "Mobile number already registered"
+      });
+    }
+
+    res.status(500).json({
+      error: "Failed to register user"
+    });
+  }
+});
+  try {
     const { name, mobile, role = "customer" } = req.body;
 
     if (!name || !mobile) {
