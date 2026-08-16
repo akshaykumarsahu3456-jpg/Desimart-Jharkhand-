@@ -4,6 +4,64 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false }
 });
+async function initDatabase() {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(100) NOT NULL,
+        mobile VARCHAR(20) NOT NULL UNIQUE,
+        role VARCHAR(20) DEFAULT 'customer',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS sellers (
+        id SERIAL PRIMARY KEY,
+        owner_name VARCHAR(100) NOT NULL,
+        shop_name VARCHAR(150) NOT NULL,
+        mobile VARCHAR(20) NOT NULL,
+        city VARCHAR(100),
+        status VARCHAR(20) DEFAULT 'pending',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS products (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(150) NOT NULL,
+        price NUMERIC(10,2) NOT NULL,
+        stock INTEGER DEFAULT 0,
+        seller_id INTEGER,
+        category VARCHAR(100),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS orders (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL,
+        items JSONB NOT NULL,
+        address TEXT NOT NULL,
+        payment_method VARCHAR(30) DEFAULT 'COD',
+        total NUMERIC(10,2) NOT NULL,
+        status VARCHAR(30) DEFAULT 'placed',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS carts (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL,
+        product_id INTEGER NOT NULL,
+        quantity INTEGER DEFAULT 1,
+        UNIQUE(user_id, product_id)
+      );
+    `);
+
+    console.log("PostgreSQL tables ready");
+  } catch (error) {
+    console.error("Database initialization error:", error.message);
+  }
+}
+
+initDatabase();
 const cors = require("cors");
 const app = express();
 const PORT = process.env.PORT || 3000;
