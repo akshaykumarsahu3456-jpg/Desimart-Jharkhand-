@@ -97,13 +97,40 @@ app.get("/api/db-test", async (req, res) => {
   }
 });
 app.get("/api/products",(req,res)=>res.json(db.products));
+app.post("/api/users", async (req, res) => {
+  try {
+    const { name, mobile, role = "customer" } = req.body;
 
-app.post("/api/users",(req,res)=>{
-  const {name,mobile,role="customer"}=req.body;
-  if(!name || !mobile) return res.status(400).json({error:"name and mobile are required"});
-  const user={id:db.users.length+1,name,mobile,role};
-  db.users.push(user); res.status(201).json(user);
+    if (!name || !mobile) {
+      return res.status(400).json({
+        error: "name and mobile are required"
+      });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO users (name, mobile, role)
+       VALUES ($1, $2, $3)
+       RETURNING id, name, mobile, role, created_at`,
+      [name, mobile, role]
+    );
+
+    res.status(201).json(result.rows[0]);
+
+  } catch (error) {
+    console.error("User creation error:", error.message);
+
+    if (error.code === "23505") {
+      return res.status(409).json({
+        error: "Mobile number already registered"
+      });
+    }
+
+    res.status(500).json({
+      error: "Failed to create user"
+    });
+  }
 });
+
 
 app.post("/api/sellers",(req,res)=>{
   const {ownerName,shopName,mobile,city}=req.body;
