@@ -114,6 +114,62 @@ app.get("/api/db-test", async (req, res) => {
   }
 });
 app.get("/api/products",(req,res)=>res.json(db.products));
+app.post("/api/login", async (req, res) => {
+  try {
+    const { mobile, password } = req.body;
+
+    if (!mobile || !password) {
+      return res.status(400).json({
+        error: "mobile and password are required"
+      });
+    }
+
+    const result = await pool.query(
+      `SELECT id, name, mobile, password_hash, role
+       FROM users
+       WHERE mobile = $1`,
+      [mobile]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(401).json({
+        error: "Invalid mobile or password"
+      });
+    }
+
+    const user = result.rows[0];
+    const bcrypt = require("bcryptjs");
+
+    const passwordMatch = await bcrypt.compare(
+      password,
+      user.password_hash
+    );
+
+    if (!passwordMatch) {
+      return res.status(401).json({
+        error: "Invalid mobile or password"
+      });
+    }
+
+    res.json({
+      success: true,
+      message: "Login successful",
+      user: {
+        id: user.id,
+        name: user.name,
+        mobile: user.mobile,
+        role: user.role
+      }
+    });
+
+  } catch (error) {
+    console.error("Login error:", error.message);
+
+    res.status(500).json({
+      error: "Login failed"
+    });
+  }
+});
 app.post("/api/users", async (req, res) => {
   try {
     const { name, mobile, password, role = "customer" } = req.body;
