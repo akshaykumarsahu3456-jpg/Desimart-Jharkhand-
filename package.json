@@ -9,8 +9,9 @@
   "dependencies": {
   "express": "^5.1.0",
   "cors": "^2.8.5",
-  "pg": "^8.16.3"
-   "bcryptjs": "^3.0.2" 
+  "pg": "^8.16.3",
+  "bcryptjs": "^3.0.2"
+  }
   }
   }
 
