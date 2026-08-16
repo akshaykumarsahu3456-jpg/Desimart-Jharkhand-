@@ -22,6 +22,22 @@ const db = {
 };
 
 app.get("/api/health",(req,res)=>res.json({ok:true,service:"DesiMart Jharkhand API"}));
+app.get("/api/db-test", async (req, res) => {
+  try {
+    const result = await pool.query("SELECT NOW()");
+    res.json({
+      ok: true,
+      database: "connected",
+      time: result.rows[0].now
+    });
+  } catch (error) {
+    console.error("Database connection error:", error);
+    res.status(500).json({
+      ok: false,
+      database: "not connected"
+    });
+  }
+});
 app.get("/api/products",(req,res)=>res.json(db.products));
 
 app.post("/api/users",(req,res)=>{
