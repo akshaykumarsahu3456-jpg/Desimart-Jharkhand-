@@ -4,6 +4,23 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false }
 });
+async function addLoginColumns() {
+  try {
+    await pool.query(`
+      ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS password_hash TEXT;
+
+      ALTER TABLE sellers
+      ADD COLUMN IF NOT EXISTS password_hash TEXT;
+    `);
+
+    console.log("Login columns ready");
+  } catch (error) {
+    console.error("Login column error:", error.message);
+  }
+}
+
+addLoginColumns();
 async function initDatabase() {
   try {
     await pool.query(`
