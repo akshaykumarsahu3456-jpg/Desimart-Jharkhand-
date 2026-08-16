@@ -8,14 +8,12 @@
   <style>
     * {
       box-sizing: border-box;
-      margin: 0;
-      padding: 0;
       font-family: Arial, sans-serif;
     }
 
     body {
+      margin: 0;
       background: #f5f5f5;
-      color: #222;
     }
 
     header {
@@ -26,27 +24,23 @@
     }
 
     .container {
-      max-width: 500px;
-      margin: 30px auto;
-      padding: 20px;
+      max-width: 600px;
+      margin: 25px auto;
+      padding: 15px;
     }
 
     .card {
       background: white;
       padding: 20px;
+      margin-bottom: 20px;
       border-radius: 12px;
       box-shadow: 0 3px 12px rgba(0,0,0,0.1);
-      margin-bottom: 20px;
-    }
-
-    h2 {
-      margin-bottom: 15px;
     }
 
     input {
       width: 100%;
       padding: 12px;
-      margin: 8px 0;
+      margin: 7px 0;
       border: 1px solid #ddd;
       border-radius: 8px;
     }
@@ -55,21 +49,31 @@
       width: 100%;
       padding: 12px;
       margin-top: 10px;
-      border: none;
+      border: 0;
       border-radius: 8px;
       background: #ff6b00;
       color: white;
       font-size: 16px;
-      cursor: pointer;
     }
 
-    button:hover {
-      opacity: 0.9;
+    .hidden {
+      display: none;
+    }
+
+    .product {
+      border: 1px solid #ddd;
+      padding: 15px;
+      margin-top: 10px;
+      border-radius: 10px;
+    }
+
+    .logout {
+      background: #333;
     }
 
     #message {
-      margin-top: 15px;
       text-align: center;
+      margin: 15px 0;
       font-weight: bold;
     }
   </style>
@@ -84,26 +88,63 @@
 
 <div class="container">
 
-  <div class="card">
-    <h2>Customer Registration</h2>
+  <div id="authSection">
 
-    <input id="regName" type="text" placeholder="Apna naam">
-    <input id="regMobile" type="tel" placeholder="Mobile number">
-    <input id="regPassword" type="password" placeholder="Password">
+    <div class="card">
+      <h2>Customer Registration</h2>
 
-    <button onclick="registerCustomer()">Register</button>
-  </div>
+      <input id="regName" type="text" placeholder="Apna naam">
+      <input id="regMobile" type="tel" placeholder="Mobile number">
+      <input id="regPassword" type="password" placeholder="Password">
 
-  <div class="card">
-    <h2>Customer Login</h2>
+      <button onclick="registerCustomer()">Register</button>
+    </div>
 
-    <input id="loginMobile" type="tel" placeholder="Mobile number">
-    <input id="loginPassword" type="password" placeholder="Password">
+    <div class="card">
+      <h2>Customer Login</h2>
 
-    <button onclick="loginCustomer()">Login</button>
+      <input id="loginMobile" type="tel" placeholder="Mobile number">
+      <input id="loginPassword" type="password" placeholder="Password">
+
+      <button onclick="loginCustomer()">Login</button>
+    </div>
+
   </div>
 
   <div id="message"></div>
+
+  <div id="dashboard" class="hidden">
+
+    <div class="card">
+      <h2>Welcome, <span id="customerName"></span> 👋</h2>
+      <p>DesiMart Jharkhand में आपका स्वागत है।</p>
+
+      <button class="logout" onclick="logout()">Logout</button>
+    </div>
+
+    <div class="card">
+      <h2>🛍️ Products</h2>
+
+      <div id="products">
+        Products loading...
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>🛒 Cart</h2>
+
+      <div id="cart">
+        Your cart is empty.
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>📦 My Orders</h2>
+
+      <p>अभी कोई order नहीं है।</p>
+    </div>
+
+  </div>
 
 </div>
 
@@ -165,8 +206,26 @@ async function loginCustomer() {
 
     const data = await response.json();
 
-    document.getElementById("message").innerText =
-      data.message || data.error;
+    if (data.success) {
+
+      document.getElementById("authSection").classList.add("hidden");
+
+      document.getElementById("dashboard").classList.remove("hidden");
+
+      document.getElementById("customerName").innerText =
+        data.user.name;
+
+      document.getElementById("message").innerText =
+        "Login successful!";
+
+      loadProducts();
+
+    } else {
+
+      document.getElementById("message").innerText =
+        data.error || "Login failed.";
+
+    }
 
   } catch (error) {
 
@@ -174,6 +233,54 @@ async function loginCustomer() {
       "Server se connection nahi ho raha.";
 
   }
+}
+
+async function loadProducts() {
+
+  try {
+
+    const response = await fetch(API + "/api/products");
+
+    const products = await response.json();
+
+    const box = document.getElementById("products");
+
+    box.innerHTML = "";
+
+    products.forEach(product => {
+
+      const div = document.createElement("div");
+
+      div.className = "product";
+
+      div.innerHTML = `
+        <h3>${product.name}</h3>
+        <p>₹${product.price}</p>
+        <p>Stock: ${product.stock}</p>
+        <p>Category: ${product.category}</p>
+      `;
+
+      box.appendChild(div);
+
+    });
+
+  } catch (error) {
+
+    document.getElementById("products").innerText =
+      "Products load nahi ho rahe.";
+
+  }
+}
+
+function logout() {
+
+  document.getElementById("dashboard").classList.add("hidden");
+
+  document.getElementById("authSection").classList.remove("hidden");
+
+  document.getElementById("message").innerText =
+    "Logout successful.";
+
 }
 
 </script>
