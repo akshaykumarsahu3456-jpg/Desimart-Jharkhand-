@@ -333,12 +333,15 @@ async function loginCustomer() {
     loadProducts();
     loadCart();
 
-  } catch (error) {
+    } catch (error) {
 
-    showMessage("Server se connection nahi ho raha.");
+    alert("ERROR: " + error.message);
+
+    showMessage(
+      "Cart server se connect nahi ho raha."
+    );
 
   }
-}
 
 
 /* =========================
