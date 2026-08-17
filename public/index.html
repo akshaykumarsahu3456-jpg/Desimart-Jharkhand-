@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
   <title>DesiMart Jharkhand</title>
 
   <style>
@@ -14,41 +15,58 @@
     body {
       margin: 0;
       background: #f5f5f5;
+      color: #222;
     }
 
     header {
       background: #ff6b00;
       color: white;
-      padding: 18px;
+      padding: 18px 15px;
       text-align: center;
     }
 
+    header h1 {
+      margin: 0;
+    }
+
+    header p {
+      margin: 6px 0 0;
+    }
+
     .container {
-      max-width: 600px;
-      margin: 25px auto;
+      max-width: 900px;
+      margin: auto;
       padding: 15px;
     }
 
     .card {
       background: white;
       padding: 20px;
-      margin-bottom: 20px;
-      border-radius: 12px;
-      box-shadow: 0 3px 12px rgba(0,0,0,0.1);
+      margin-bottom: 18px;
+      border-radius: 14px;
+      box-shadow: 0 3px 12px rgba(0,0,0,0.08);
     }
 
-    input {
+    input,
+    textarea,
+    select {
       width: 100%;
       padding: 12px;
       margin: 7px 0;
       border: 1px solid #ddd;
       border-radius: 8px;
+      font-size: 15px;
+    }
+
+    textarea {
+      min-height: 90px;
+      resize: vertical;
     }
 
     button {
       width: 100%;
       padding: 12px;
-      margin-top: 10px;
+      margin-top: 9px;
       border: 0;
       border-radius: 8px;
       background: #ff6b00;
@@ -57,49 +75,171 @@
       cursor: pointer;
     }
 
-    .hidden {
-      display: none;
+    button:active {
+      transform: scale(0.98);
     }
 
-    .product {
-      border: 1px solid #ddd;
-      padding: 15px;
-      margin-top: 10px;
-      border-radius: 10px;
-      background: #fff;
-    }
-
-    .cart-item {
-      border: 1px solid #ddd;
-      padding: 12px;
-      margin-top: 10px;
-      border-radius: 10px;
-    }
-
-    .small-btn {
-      width: auto;
-      padding: 7px 12px;
-      margin: 4px;
-    }
-
-    .logout {
-      background: #333;
+    .secondary {
+      background: #555;
     }
 
     .danger {
       background: #d32f2f;
     }
 
+    .success {
+      background: #198754;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
     #message {
       text-align: center;
+      font-weight: bold;
       margin: 15px 0;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 15px;
+    }
+
+    .tabs button {
+      margin: 0;
+    }
+
+    .category-list {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 8px;
+    }
+
+    .category-btn {
+      min-width: 150px;
+      width: auto;
+      margin: 0;
+      background: white;
+      color: #333;
+      border: 1px solid #ddd;
+    }
+
+    .category-btn.active {
+      background: #ff6b00;
+      color: white;
+    }
+
+    .product-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 15px;
+    }
+
+    .product {
+      border: 1px solid #ddd;
+      border-radius: 12px;
+      padding: 15px;
+      background: white;
+    }
+
+    .product img {
+      width: 100%;
+      height: 170px;
+      object-fit: cover;
+      border-radius: 8px;
+      background: #eee;
+    }
+
+    .product h3 {
+      margin-bottom: 5px;
+    }
+
+    .price {
+      font-size: 20px;
+      font-weight: bold;
+      color: #e65100;
+    }
+
+    .stock {
+      font-size: 14px;
+      color: #555;
+    }
+
+    .cart-item,
+    .order {
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      padding: 14px;
+      margin-top: 10px;
+    }
+
+    .quantity-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .quantity-row button {
+      width: 45px;
+      margin: 0;
+      padding: 8px;
+    }
+
+    .quantity-row span {
+      min-width: 35px;
+      text-align: center;
       font-weight: bold;
     }
 
     .total {
-      font-size: 20px;
+      font-size: 22px;
       font-weight: bold;
       margin-top: 15px;
+    }
+
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .top-bar button {
+      width: auto;
+      margin: 0;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 5px 9px;
+      border-radius: 20px;
+      background: #fff0e6;
+      color: #e65100;
+      font-size: 13px;
+    }
+
+    .empty {
+      text-align: center;
+      padding: 25px 10px;
+      color: #777;
+    }
+
+    @media (max-width: 600px) {
+      .tabs {
+        flex-direction: column;
+      }
+
+      .top-bar {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .top-bar button {
+        width: 100%;
+      }
     }
   </style>
 </head>
@@ -113,202 +253,566 @@
 
 <div class="container">
 
-  <!-- LOGIN / REGISTER -->
-
-  <div id="authSection">
-
-    <div class="card">
-      <h2>Customer Registration</h2>
-
-      <input id="regName" type="text" placeholder="Apna naam">
-      <input id="regMobile" type="tel" placeholder="Mobile number">
-      <input id="regPassword" type="password" placeholder="Password">
-
-      <button type="button" onclick="registerCustomer()">
-        Register
-      </button>
-    </div>
-
-    <div class="card">
-      <h2>Customer Login</h2>
-
-      <input id="loginMobile" type="tel" placeholder="Mobile number">
-      <input id="loginPassword" type="password" placeholder="Password">
-
-      <button type="button" onclick="loginCustomer()">
-        Login
-      </button>
-    </div>
-
-  </div>
-
   <div id="message"></div>
 
-  <!-- DASHBOARD -->
+  <!-- =========================
+       AUTH
+  ========================== -->
 
-  <div id="dashboard" class="hidden">
+  <section id="authSection">
+
+    <div class="tabs">
+      <button type="button" onclick="showCustomerAuth()">
+        Customer
+      </button>
+
+      <button type="button" class="secondary" onclick="showSellerAuth()">
+        Seller
+      </button>
+    </div>
+
+    <!-- CUSTOMER -->
+
+    <div id="customerAuth">
+
+      <div class="card">
+        <h2>Customer Registration</h2>
+
+        <input
+          id="regName"
+          type="text"
+          placeholder="अपना नाम">
+
+        <input
+          id="regMobile"
+          type="tel"
+          placeholder="Mobile number">
+
+        <input
+          id="regPassword"
+          type="password"
+          placeholder="Password (कम से कम 6 characters)">
+
+        <button
+          type="button"
+          onclick="registerCustomer()">
+          Register
+        </button>
+      </div>
+
+      <div class="card">
+        <h2>Customer Login</h2>
+
+        <input
+          id="loginMobile"
+          type="tel"
+          placeholder="Mobile number">
+
+        <input
+          id="loginPassword"
+          type="password"
+          placeholder="Password">
+
+        <button
+          type="button"
+          onclick="loginCustomer()">
+          Login
+        </button>
+      </div>
+
+    </div>
+
+    <!-- SELLER -->
+
+    <div id="sellerAuth" class="hidden">
+
+      <div class="card">
+        <h2>Seller Registration</h2>
+
+        <input
+          id="sellerOwner"
+          type="text"
+          placeholder="Owner name">
+
+        <input
+          id="sellerShop"
+          type="text"
+          placeholder="Shop name">
+
+        <input
+          id="sellerMobile"
+          type="tel"
+          placeholder="Mobile number">
+
+        <input
+          id="sellerCity"
+          type="text"
+          placeholder="City">
+
+        <input
+          id="sellerPassword"
+          type="password"
+          placeholder="Password">
+
+        <button
+          type="button"
+          onclick="registerSeller()">
+          Seller Register
+        </button>
+      </div>
+
+      <div class="card">
+        <h2>Seller Login</h2>
+
+        <input
+          id="sellerLoginMobile"
+          type="tel"
+          placeholder="Mobile number">
+
+        <input
+          id="sellerLoginPassword"
+          type="password"
+          placeholder="Password">
+
+        <button
+          type="button"
+          onclick="loginSeller()">
+          Seller Login
+        </button>
+      </div>
+
+    </div>
+
+  </section>
+
+  <!-- =========================
+       CUSTOMER DASHBOARD
+  ========================== -->
+
+  <section id="customerDashboard" class="hidden">
 
     <div class="card">
-      <h2>
-        Welcome, <span id="customerName"></span> 👋
-      </h2>
 
-      <p>DesiMart Jharkhand में आपका स्वागत है।</p>
+      <div class="top-bar">
 
-      <button type="button" class="logout" onclick="logout()">
-        Logout
-      </button>
+        <div>
+          <h2>
+            Welcome,
+            <span id="customerName"></span>
+            👋
+          </h2>
+
+          <span class="badge">
+            Customer
+          </span>
+        </div>
+
+        <button
+          type="button"
+          class="secondary"
+          onclick="logout()">
+          Logout
+        </button>
+
+      </div>
+
+    </div>
+
+    <!-- SEARCH -->
+
+    <div class="card">
+
+      <h2>🔎 Search Products</h2>
+
+      <input
+        id="searchInput"
+        type="search"
+        placeholder="Product का नाम खोजें..."
+        oninput="searchProducts()">
+
+    </div>
+
+    <!-- CATEGORIES -->
+
+    <div class="card">
+
+      <h2>🗂️ Categories</h2>
+
+      <div
+        id="categories"
+        class="category-list">
+
+        Loading categories...
+
+      </div>
+
     </div>
 
     <!-- PRODUCTS -->
 
     <div class="card">
+
       <h2>🛍️ Products</h2>
 
-      <div id="products">
+      <div
+        id="products"
+        class="product-grid">
+
         Products loading...
+
       </div>
+
     </div>
 
     <!-- CART -->
 
     <div class="card">
+
       <h2>🛒 My Cart</h2>
 
       <div id="cart">
-        Your cart is empty.
+        Cart loading...
       </div>
 
-      <div id="cartTotal" class="total"></div>
+      <div
+        id="cartTotal"
+        class="total">
+      </div>
+
+    </div>
+
+    <!-- CHECKOUT -->
+
+    <div
+      id="checkoutSection"
+      class="card hidden">
+
+      <h2>📍 Delivery & Order</h2>
+
+      <textarea
+        id="address"
+        placeholder="पूरा delivery address लिखें">
+      </textarea>
+
+      <select id="paymentMethod">
+
+        <option value="COD">
+          Cash on Delivery
+        </option>
+
+      </select>
 
       <button
         type="button"
-        id="checkoutButton"
-        class="hidden"
-        onclick="checkout()">
-        Checkout
+        class="success"
+        onclick="placeOrder()">
+        Place COD Order
       </button>
+
     </div>
 
     <!-- ORDERS -->
 
     <div class="card">
+
       <h2>📦 My Orders</h2>
-      <p>अभी कोई order नहीं है।</p>
+
+      <div id="orders">
+        Orders loading...
+      </div>
+
     </div>
 
-  </div>
+  </section>
+
+  <!-- =========================
+       SELLER DASHBOARD
+  ========================== -->
+
+  <section
+    id="sellerDashboard"
+    class="hidden">
+
+    <div class="card">
+
+      <div class="top-bar">
+
+        <div>
+          <h2 id="sellerShopName"></h2>
+
+          <span class="badge">
+            Seller
+          </span>
+        </div>
+
+        <button
+          type="button"
+          class="secondary"
+          onclick="sellerLogout()">
+          Logout
+        </button>
+
+      </div>
+
+    </div>
+
+    <!-- ADD PRODUCT -->
+
+    <div class="card">
+
+      <h2>➕ नया Product जोड़ें</h2>
+
+      <input
+        id="productName"
+        type="text"
+        placeholder="Product name">
+
+      <textarea
+        id="productDescription"
+        placeholder="Product description">
+      </textarea>
+
+      <input
+        id="productPrice"
+        type="number"
+        min="0"
+        placeholder="Price">
+
+      <input
+        id="productStock"
+        type="number"
+        min="0"
+        placeholder="Stock">
+
+      <input
+        id="productImage"
+        type="url"
+        placeholder="Product image URL">
+
+      <select id="productCategory">
+        <option value="">
+          Category चुनें
+        </option>
+      </select>
+
+      <button
+        type="button"
+        onclick="addSellerProduct()">
+        Product Add करें
+      </button>
+
+    </div>
+
+    <!-- SELLER PRODUCTS -->
+
+    <div class="card">
+
+      <h2>📦 मेरे Products</h2>
+
+      <div
+        id="sellerProducts"
+        class="product-grid">
+
+        Products loading...
+
+      </div>
+
+    </div>
+
+  </section>
 
 </div>
 
 <script>
 
-const API = "https://desimart-jharkhand.onrender.com";
-
+const API =
+  "https://desimart-jharkhand.onrender.com";
 
 /* =========================
    MESSAGE
 ========================= */
 
 function showMessage(text) {
-  document.getElementById("message").innerText = text;
+
+  document.getElementById(
+    "message"
+  ).innerText = text;
+
 }
 
+/* =========================
+   AUTH SWITCH
+========================= */
+
+function showCustomerAuth() {
+
+  document
+    .getElementById("customerAuth")
+    .classList.remove("hidden");
+
+  document
+    .getElementById("sellerAuth")
+    .classList.add("hidden");
+
+}
+
+function showSellerAuth() {
+
+  document
+    .getElementById("customerAuth")
+    .classList.add("hidden");
+
+  document
+    .getElementById("sellerAuth")
+    .classList.remove("hidden");
+
+}
 
 /* =========================
-   REGISTER
+   CUSTOMER REGISTER
 ========================= */
 
 async function registerCustomer() {
 
   const name =
-    document.getElementById("regName").value.trim();
+    document
+      .getElementById("regName")
+      .value.trim();
 
   const mobile =
-    document.getElementById("regMobile").value.trim();
+    document
+      .getElementById("regMobile")
+      .value.trim();
 
   const password =
-    document.getElementById("regPassword").value;
+    document
+      .getElementById("regPassword")
+      .value;
 
   if (!name || !mobile || !password) {
-    showMessage("Naam, mobile aur password bhariye.");
+
+    showMessage(
+      "नाम, mobile और password भरें।"
+    );
+
     return;
   }
 
   try {
 
-    const response = await fetch(API + "/api/users", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
+    const response =
+      await fetch(
+        API + "/api/users",
+        {
+          method: "POST",
 
-      body: JSON.stringify({
-        name: name,
-        mobile: mobile,
-        password: password,
-        role: "customer"
-      })
-    });
-alert("Server response aa gaya: " + response.status);
-    const data = await response.json();
+          headers: {
+            "Content-Type":
+              "application/json"
+          },
+
+          body: JSON.stringify({
+            name,
+            mobile,
+            password
+          })
+        }
+      );
+
+    const data =
+      await response.json();
 
     if (!response.ok) {
-      showMessage(data.error || "Registration failed.");
+
+      showMessage(
+        data.error ||
+        "Registration failed"
+      );
+
       return;
     }
 
-    showMessage("Registration successful! Ab login kijiye.");
+    showMessage(
+      "Registration successful! अब login करें।"
+    );
 
-    document.getElementById("regName").value = "";
-    document.getElementById("regMobile").value = "";
-    document.getElementById("regPassword").value = "";
+    document.getElementById(
+      "regName"
+    ).value = "";
+
+    document.getElementById(
+      "regMobile"
+    ).value = "";
+
+    document.getElementById(
+      "regPassword"
+    ).value = "";
 
   } catch (error) {
 
-    showMessage("Server se connection nahi ho raha.");
+    console.error(error);
 
+    showMessage(
+      "Server से connection नहीं हो रहा।"
+    );
   }
 }
 
-
 /* =========================
-   LOGIN
+   CUSTOMER LOGIN
 ========================= */
 
 async function loginCustomer() {
 
   const mobile =
-    document.getElementById("loginMobile").value.trim();
+    document
+      .getElementById("loginMobile")
+      .value.trim();
 
   const password =
-    document.getElementById("loginPassword").value;
+    document
+      .getElementById("loginPassword")
+      .value;
 
   if (!mobile || !password) {
-    showMessage("Mobile aur password bhariye.");
+
+    showMessage(
+      "Mobile और password भरें।"
+    );
+
     return;
   }
 
   try {
 
-    const response = await fetch(API + "/api/login", {
-      method: "POST",
+    const response =
+      await fetch(
+        API + "/api/login",
+        {
+          method: "POST",
 
-      headers: {
-        "Content-Type": "application/json"
-      },
+          headers: {
+            "Content-Type":
+              "application/json"
+          },
 
-      body: JSON.stringify({
-        mobile: mobile,
-        password: password
-      })
-    });
+          body: JSON.stringify({
+            mobile,
+            password
+          })
+        }
+      );
 
-    const data = await response.json();
+    const data =
+      await response.json();
 
-    if (!response.ok || !data.success) {
+    if (!response.ok) {
 
-      showMessage(data.error || "Login failed.");
+      showMessage(
+        data.error ||
+        "Login failed"
+      );
+
       return;
     }
 
@@ -317,80 +821,276 @@ async function loginCustomer() {
       JSON.stringify(data.user)
     );
 
-    document
-      .getElementById("authSection")
-      .classList.add("hidden");
-
-    document
-      .getElementById("dashboard")
-      .classList.remove("hidden");
-
-    document.getElementById("customerName").innerText =
-      data.user.name;
-
-    showMessage("Login successful!");
-
-    loadProducts();
-    loadCart();
-
-    } catch (error) {
-
-    alert("ERROR: " + error.message);
-
-    showMessage(
-      "Cart server se connect nahi ho raha."
+    showCustomerDashboard(
+      data.user
     );
 
-  }
+  } catch (error) {
 
+    console.error(error);
+
+    showMessage(
+      "Server से connection नहीं हो रहा।"
+    );
+  }
+}
 
 /* =========================
-   LOAD PRODUCTS
+   CUSTOMER DASHBOARD
+========================= */
+
+function showCustomerDashboard(user) {
+
+  document
+    .getElementById("authSection")
+    .classList.add("hidden");
+
+  document
+    .getElementById("sellerDashboard")
+    .classList.add("hidden");
+
+  document
+    .getElementById("customerDashboard")
+    .classList.remove("hidden");
+
+  document.getElementById(
+    "customerName"
+  ).innerText =
+    user.name || "";
+
+  loadCategories();
+  loadProducts();
+  loadCart();
+  loadOrders();
+
+}
+
+/* =========================
+   CATEGORIES
+========================= */
+
+let selectedCategory = "";
+
+async function loadCategories() {
+
+  try {
+
+    const response =
+      await fetch(
+        API + "/api/categories"
+      );
+
+    const categories =
+      await response.json();
+
+    const box =
+      document.getElementById(
+        "categories"
+      );
+
+    const select =
+      document.getElementById(
+        "productCategory"
+      );
+
+    box.innerHTML = "";
+
+    select.innerHTML =
+      `<option value="">
+        Category चुनें
+      </option>`;
+
+    categories.forEach(category => {
+
+      const button =
+        document.createElement(
+          "button"
+        );
+
+      button.type = "button";
+
+      button.className =
+        "category-btn";
+
+      button.innerText =
+        category.name;
+
+      button.onclick = () => {
+
+        selectedCategory =
+          category.id;
+
+        document
+          .querySelectorAll(
+            ".category-btn"
+          )
+          .forEach(btn =>
+            btn.classList.remove(
+              "active"
+            )
+          );
+
+        button.classList.add(
+          "active"
+        );
+
+        loadProducts();
+      };
+
+      box.appendChild(button);
+
+      const option =
+        document.createElement(
+          "option"
+        );
+
+      option.value =
+        category.id;
+
+      option.textContent =
+        category.name;
+
+      select.appendChild(option);
+
+    });
+
+  } catch (error) {
+
+    console.error(error);
+
+    document.getElementById(
+      "categories"
+    ).innerText =
+      "Categories load नहीं हो रही।";
+  }
+}
+
+/* =========================
+   PRODUCTS
 ========================= */
 
 async function loadProducts() {
 
   const box =
-    document.getElementById("products");
+    document.getElementById(
+      "products"
+    );
 
-  box.innerText = "Products loading...";
+  box.innerHTML =
+    "Products loading...";
 
   try {
 
-    const response =
-      await fetch(API + "/api/products");
+    const search =
+      document
+        .getElementById(
+          "searchInput"
+        )
+        .value.trim();
 
-    if (!response.ok) {
-      throw new Error("Products API failed");
+    const params =
+      new URLSearchParams();
+
+    if (selectedCategory) {
+      params.set(
+        "category",
+        selectedCategory
+      );
     }
+
+    if (search) {
+      params.set(
+        "search",
+        search
+      );
+    }
+
+    const url =
+      API +
+      "/api/products?" +
+      params.toString();
+
+    const response =
+      await fetch(url);
 
     const products =
       await response.json();
 
+    if (!response.ok) {
+      throw new Error(
+        "Products API failed"
+      );
+    }
+
     box.innerHTML = "";
 
-    if (!products || products.length === 0) {
-      box.innerText = "Abhi koi product available nahi hai.";
+    if (!products.length) {
+
+      box.innerHTML =
+        `<div class="empty">
+          अभी इस category में कोई product उपलब्ध नहीं है।
+        </div>`;
+
       return;
     }
 
     products.forEach(product => {
 
       const div =
-        document.createElement("div");
+        document.createElement(
+          "div"
+        );
 
-      div.className = "product";
+      div.className =
+        "product";
+
+      const image =
+        product.image_url ||
+        "https://via.placeholder.com/400x300?text=DesiMart";
 
       div.innerHTML = `
-        <h3>${product.name}</h3>
-        <p>Price: ₹${product.price}</p>
-        <p>Stock: ${product.stock}</p>
-        <p>Category: ${product.category}</p>
+
+        <img
+          src="${image}"
+          alt="${escapeHtml(product.name)}"
+          onerror="this.src='https://via.placeholder.com/400x300?text=DesiMart'">
+
+        <h3>
+          ${escapeHtml(product.name)}
+        </h3>
+
+        <p>
+          ${escapeHtml(
+            product.description || ""
+          )}
+        </p>
+
+        <p class="price">
+          ₹${Number(product.price)}
+        </p>
+
+        <p>
+          Category:
+          ${escapeHtml(
+            product.category || ""
+          )}
+        </p>
+
+        <p class="stock">
+          Stock: ${product.stock}
+        </p>
 
         <button
           type="button"
-          onclick="addToCart(${product.id})">
-          🛒 Add to Cart
+          onclick="addToCart(${product.id})"
+          ${Number(product.stock) <= 0
+            ? "disabled"
+            : ""}>
+          ${
+            Number(product.stock) <= 0
+              ? "Out of Stock"
+              : "🛒 Add to Cart"
+          }
         </button>
       `;
 
@@ -400,47 +1100,76 @@ async function loadProducts() {
 
   } catch (error) {
 
-    box.innerText =
-      "Products load nahi ho rahe.";
+    console.error(error);
 
+    box.innerHTML =
+      `<div class="empty">
+        Products load नहीं हो रहे।
+      </div>`;
   }
 }
 
+/* =========================
+   SEARCH
+========================= */
+
+let searchTimer;
+
+function searchProducts() {
+
+  clearTimeout(searchTimer);
+
+  searchTimer =
+    setTimeout(
+      () => loadProducts(),
+      300
+    );
+}
 
 /* =========================
-   ADD TO CART
+   ADD CART
 ========================= */
 
 async function addToCart(productId) {
-alert("Button chal raha hai");
-  const savedUser =
-    localStorage.getItem("desimartUser");
 
-  if (!savedUser) {
-    showMessage("Please login first.");
+  const saved =
+    localStorage.getItem(
+      "desimartUser"
+    );
+
+  if (!saved) {
+
+    showMessage(
+      "पहले login करें।"
+    );
+
     return;
   }
 
   const user =
-    JSON.parse(savedUser);
+    JSON.parse(saved);
 
   try {
 
-    const response = await fetch(
-      API + "/api/cart/" + user.id,
-      {
-        method: "POST",
+    const response =
+      await fetch(
+        API +
+        "/api/cart/" +
+        user.id,
+        {
+          method: "POST",
 
-        headers: {
-          "Content-Type": "application/json"
-        },
+          headers: {
+            "Content-Type":
+              "application/json"
+          },
 
-        body: JSON.stringify({
-          productId: productId,
-          quantity: 1
-        })
-      }
-    );
+          body: JSON.stringify({
+            productId,
+            quantity: 1
+          })
+        }
+      );
 
     const data =
       await response.json();
@@ -448,290 +1177,73 @@ alert("Button chal raha hai");
     if (!response.ok) {
 
       showMessage(
-        data.error || "Cart mein add nahi hua."
+        data.error ||
+        "Cart में add नहीं हुआ।"
       );
 
       return;
     }
 
     showMessage(
-      "Product cart mein add ho gaya! 🛒"
+      "Product cart में add हो गया 🛒"
     );
 
     loadCart();
 
   } catch (error) {
 
-    showMessage(
-      "Cart server se connect nahi ho raha."
-    );
+    console.error(error);
 
+    showMessage(
+      "Cart server से connect नहीं हो रहा।"
+    );
   }
 }
 
-
 /* =========================
-   LOAD CART
+   CART
 ========================= */
 
 async function loadCart() {
 
-  const savedUser =
-    localStorage.getItem("desimartUser");
+  const saved =
+    localStorage.getItem(
+      "desimartUser"
+    );
 
-  if (!savedUser) {
+  if (!saved) {
     return;
   }
 
   const user =
-    JSON.parse(savedUser);
+    JSON.parse(saved);
 
-  const cartBox =
-    document.getElementById("cart");
+  const box =
+    document.getElementById(
+      "cart"
+    );
 
   const totalBox =
-    document.getElementById("cartTotal");
+    document.getElementById(
+      "cartTotal"
+    );
 
-  const checkoutButton =
-    document.getElementById("checkoutButton");
-
-  try {
-
-    const response =
-      await fetch(API + "/api/cart/" + user.id);
-
-    if (!response.ok) {
-      cartBox.innerText = "Cart abhi empty hai.";
-      totalBox.innerText = "";
-      checkoutButton.classList.add("hidden");
-      return;
-    }
-
-    const cart =
-      await response.json();
-
-    cartBox.innerHTML = "";
-
-    if (!cart || cart.length === 0) {
-
-      cartBox.innerText =
-        "Your cart is empty.";
-
-      totalBox.innerText = "";
-
-      checkoutButton.classList.add("hidden");
-
-      return;
-    }
-
-    let total = 0;
-
-    cart.forEach(item => {
-
-      const div =
-        document.createElement("div");
-
-      div.className = "cart-item";
-
-      const price =
-        Number(item.price || 0);
-
-      const quantity =
-        Number(item.quantity || 1);
-
-      const itemTotal =
-        price * quantity;
-
-      total += itemTotal;
-
-      div.innerHTML = `
-        <strong>
-          ${item.name || "Product"}
-        </strong>
-
-        <p>Price: ₹${price}</p>
-
-        <p>Quantity: ${quantity}</p>
-
-        <p>Item Total: ₹${itemTotal}</p>
-
-        <button
-          type="button"
-          class="danger small-btn"
-          onclick="removeFromCart(${item.productId})">
-          Remove
-        </button>
-      `;
-
-      cartBox.appendChild(div);
-
-    });
-
-    totalBox.innerText =
-      "Total: ₹" + total;
-
-    checkoutButton.classList.remove("hidden");
-
-  } catch (error) {
-
-    cartBox.innerText =
-      "Cart load nahi ho raha.";
-
-    totalBox.innerText = "";
-
-    checkoutButton.classList.add("hidden");
-
-  }
-}
-
-
-/* =========================
-   REMOVE FROM CART
-========================= */
-
-async function removeFromCart(productId) {
-
-  const savedUser =
-    localStorage.getItem("desimartUser");
-
-  if (!savedUser) {
-    return;
-  }
-
-  const user =
-    JSON.parse(savedUser);
+  const checkout =
+    document.getElementById(
+      "checkoutSection"
+    );
 
   try {
 
     const response =
       await fetch(
-        API + "/api/cart/" +
-        user.id +
-        "/" +
-        productId,
-        {
-          method: "DELETE"
-        }
+        API +
+        "/api/cart/" +
+        user.id
       );
+
+    const data =
+      await response.json();
 
     if (!response.ok) {
-
-      showMessage(
-        "Cart item remove nahi hua."
-      );
-
-      return;
-    }
-
-    showMessage(
-      "Product cart se remove ho gaya."
-    );
-
-    loadCart();
-
-  } catch (error) {
-
-    showMessage(
-      "Cart server se connect nahi ho raha."
-    );
-
-  }
-}
-
-
-/* =========================
-   CHECKOUT
-========================= */
-
-function checkout() {
-
-  showMessage(
-    "Checkout feature next step mein add karenge."
-  );
-
-}
-
-
-/* =========================
-   LOGOUT
-========================= */
-
-function logout() {
-
-  localStorage.removeItem("desimartUser");
-
-  document
-    .getElementById("dashboard")
-    .classList.add("hidden");
-
-  document
-    .getElementById("authSection")
-    .classList.remove("hidden");
-
-  document.getElementById("customerName").innerText = "";
-
-  document.getElementById("products").innerHTML =
-    "Products loading...";
-
-  document.getElementById("cart").innerText =
-    "Your cart is empty.";
-
-  document.getElementById("cartTotal").innerText = "";
-
-  document
-    .getElementById("checkoutButton")
-    .classList.add("hidden");
-
-  showMessage("Logout successful.");
-
-}
-
-
-/* =========================
-   AUTO LOGIN
-========================= */
-
-window.addEventListener("load", function() {
-
-  const savedUser =
-    localStorage.getItem("desimartUser");
-
-  if (!savedUser) {
-    return;
-  }
-
-  try {
-
-    const user =
-      JSON.parse(savedUser);
-
-    if (!user || !user.id) {
-      return;
-    }
-
-    document
-      .getElementById("authSection")
-      .classList.add("hidden");
-
-    document
-      .getElementById("dashboard")
-      .classList.remove("hidden");
-
-    document.getElementById("customerName").innerText =
-      user.name || "";
-
-    loadProducts();
-    loadCart();
-
-  } catch (error) {
-
-    localStorage.removeItem("desimartUser");
-
-  }
-
-});
-
-</script>
-
-</body>
-</html>
+      throw new E
