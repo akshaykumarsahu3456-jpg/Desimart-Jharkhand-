@@ -239,7 +239,6 @@ async function registerCustomer() {
 
     const response = await fetch(API + "/api/users", {
       method: "POST",
-
       headers: {
         "Content-Type": "application/json"
       },
@@ -251,7 +250,7 @@ async function registerCustomer() {
         role: "customer"
       })
     });
-
+alert("Server response aa gaya: " + response.status);
     const data = await response.json();
 
     if (!response.ok) {
