@@ -8,7 +8,9 @@ const PORT = process.env.PORT || 3000;
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }
+  ssl: process.env.DATABASE_URL
+    ? { rejectUnauthorized: false }
+    : false
 });
 
 app.use(cors());
@@ -16,37 +18,7 @@ app.use(express.json());
 app.use(express.static("public"));
 
 /* =========================
-   TEMP PRODUCT DATA
-========================= */
-
-const products = [
-  {
-    id: 1,
-    name: "Nagpuri Handicraft",
-    price: 499,
-    stock: 20,
-    sellerId: 1,
-    category: "Handicraft"
-  },
-  {
-    id: 2,
-    name: "Traditional Gamcha",
-    price: 299,
-    stock: 35,
-    sellerId: 2,
-    category: "Fashion"
-  }
-];
-
-/* =========================
-   TEMP CART & ORDERS
-========================= */
-
-const carts = {};
-const orders = [];
-
-/* =========================
-   DATABASE INITIALIZATION
+   DATABASE
 ========================= */
 
 async function initDatabase() {
@@ -55,8 +27,8 @@ async function initDatabase() {
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
         name VARCHAR(100) NOT NULL,
-        mobile VARCHAR(20) NOT NULL UNIQUE,
-        password_hash TEXT,
+        mobile VARCHAR(20) UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
         role VARCHAR(20) DEFAULT 'customer',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
@@ -65,27 +37,43 @@ async function initDatabase() {
         id SERIAL PRIMARY KEY,
         owner_name VARCHAR(100) NOT NULL,
         shop_name VARCHAR(150) NOT NULL,
-        mobile VARCHAR(20) NOT NULL,
+        mobile VARCHAR(20) UNIQUE NOT NULL,
         city VARCHAR(100),
         password_hash TEXT,
         status VARCHAR(20) DEFAULT 'pending',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
 
+      CREATE TABLE IF NOT EXISTS categories (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(100) UNIQUE NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
       CREATE TABLE IF NOT EXISTS products (
         id SERIAL PRIMARY KEY,
-        name VARCHAR(150) NOT NULL,
+        name VARCHAR(200) NOT NULL,
+        description TEXT,
         price NUMERIC(10,2) NOT NULL,
         stock INTEGER DEFAULT 0,
-        seller_id INTEGER,
-        category VARCHAR(100),
+        image_url TEXT,
+        category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL,
+        seller_id INTEGER REFERENCES sellers(id) ON DELETE SET NULL,
+        status VARCHAR(20) DEFAULT 'active',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS carts (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        product_id INTEGER REFERENCES products(id) ON DELETE CASCADE,
+        quantity INTEGER NOT NULL DEFAULT 1,
+        UNIQUE(user_id, product_id)
       );
 
       CREATE TABLE IF NOT EXISTS orders (
         id SERIAL PRIMARY KEY,
-        user_id INTEGER NOT NULL,
-        items JSONB NOT NULL,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
         address TEXT NOT NULL,
         payment_method VARCHAR(30) DEFAULT 'COD',
         total NUMERIC(10,2) NOT NULL,
@@ -93,16 +81,41 @@ async function initDatabase() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
 
-      CREATE TABLE IF NOT EXISTS carts (
+      CREATE TABLE IF NOT EXISTS order_items (
         id SERIAL PRIMARY KEY,
-        user_id INTEGER NOT NULL,
-        product_id INTEGER NOT NULL,
-        quantity INTEGER DEFAULT 1,
-        UNIQUE(user_id, product_id)
+        order_id INTEGER REFERENCES orders(id) ON DELETE CASCADE,
+        product_id INTEGER REFERENCES products(id) ON DELETE SET NULL,
+        product_name VARCHAR(200) NOT NULL,
+        price NUMERIC(10,2) NOT NULL,
+        quantity INTEGER NOT NULL
       );
     `);
 
-    console.log("PostgreSQL tables ready");
+    /* Categories */
+
+    const categories = [
+      "फल और सब्ज़ियाँ",
+      "चावल, आटा, दाल और अनाज",
+      "किराना",
+      "मसाले",
+      "कपड़े और Gamcha",
+      "Jharkhand Handicrafts",
+      "Desi और Local Products",
+      "घर और Personal Care",
+      "जूते और चप्पल",
+      "Bags और Accessories"
+    ];
+
+    for (const name of categories) {
+      await pool.query(
+        `INSERT INTO categories (name)
+         VALUES ($1)
+         ON CONFLICT (name) DO NOTHING`,
+        [name]
+      );
+    }
+
+    console.log("Database ready");
   } catch (error) {
     console.error("Database initialization error:", error.message);
   }
@@ -115,13 +128,9 @@ async function initDatabase() {
 app.get("/api/health", (req, res) => {
   res.json({
     ok: true,
-    service: "DesiMart Jharkhand API"
+    service: "DesiMart Jharkhand"
   });
 });
-
-/* =========================
-   DATABASE TEST
-========================= */
 
 app.get("/api/db-test", async (req, res) => {
   try {
@@ -133,7 +142,7 @@ app.get("/api/db-test", async (req, res) => {
       time: result.rows[0].now
     });
   } catch (error) {
-    console.error("Database connection error:", error.message);
+    console.error(error.message);
 
     res.status(500).json({
       ok: false,
@@ -143,63 +152,54 @@ app.get("/api/db-test", async (req, res) => {
 });
 
 /* =========================
-   PRODUCTS
-========================= */
-
-app.get("/api/products", (req, res) => {
-  res.json(products);
-});
-
-/* =========================
    REGISTER CUSTOMER
 ========================= */
 
 app.post("/api/users", async (req, res) => {
   try {
-    const {
-      name,
-      mobile,
-      password,
-      role = "customer"
-    } = req.body;
+    const { name, mobile, password } = req.body;
 
     if (!name || !mobile || !password) {
       return res.status(400).json({
-        error: "name, mobile and password are required"
+        error: "नाम, मोबाइल और password जरूरी है"
       });
     }
 
     if (password.length < 6) {
       return res.status(400).json({
-        error: "password must be at least 6 characters"
+        error: "Password कम से कम 6 characters का होना चाहिए"
       });
     }
 
-    const passwordHash = await bcrypt.hash(password, 10);
+    const passwordHash =
+      await bcrypt.hash(password, 10);
 
     const result = await pool.query(
       `
       INSERT INTO users
       (name, mobile, password_hash, role)
-      VALUES ($1, $2, $3, $4)
-      RETURNING id, name, mobile, role, created_at
+      VALUES ($1, $2, $3, 'customer')
+      RETURNING id, name, mobile, role
       `,
-      [name, mobile, passwordHash, role]
+      [name, mobile, passwordHash]
     );
 
-    res.status(201).json(result.rows[0]);
+    res.status(201).json({
+      success: true,
+      user: result.rows[0]
+    });
 
   } catch (error) {
-    console.error("Registration error:", error.message);
+    console.error("Registration:", error.message);
 
     if (error.code === "23505") {
       return res.status(409).json({
-        error: "Mobile number already registered"
+        error: "यह mobile number पहले से registered है"
       });
     }
 
     res.status(500).json({
-      error: "Failed to register user"
+      error: "Registration failed"
     });
   }
 });
@@ -210,59 +210,44 @@ app.post("/api/users", async (req, res) => {
 
 app.post("/api/login", async (req, res) => {
   try {
-    const {
-      mobile,
-      password
-    } = req.body;
+    const { mobile, password } = req.body;
 
     if (!mobile || !password) {
       return res.status(400).json({
-        error: "mobile and password are required"
+        error: "Mobile और password जरूरी है"
       });
     }
 
     const result = await pool.query(
       `
-      SELECT
-        id,
-        name,
-        mobile,
-        password_hash,
-        role
+      SELECT id, name, mobile, password_hash, role
       FROM users
       WHERE mobile = $1
       `,
       [mobile]
     );
 
-    if (result.rows.length === 0) {
+    if (!result.rows.length) {
       return res.status(401).json({
-        error: "Invalid mobile or password"
+        error: "Mobile या password गलत है"
       });
     }
 
     const user = result.rows[0];
 
-    if (!user.password_hash) {
-      return res.status(401).json({
-        error: "Password not set for this account"
-      });
-    }
-
-    const passwordMatch = await bcrypt.compare(
+    const match = await bcrypt.compare(
       password,
       user.password_hash
     );
 
-    if (!passwordMatch) {
+    if (!match) {
       return res.status(401).json({
-        error: "Invalid mobile or password"
+        error: "Mobile या password गलत है"
       });
     }
 
     res.json({
       success: true,
-      message: "Login successful",
       user: {
         id: user.id,
         name: user.name,
@@ -272,7 +257,7 @@ app.post("/api/login", async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Login error:", error.message);
+    console.error("Login:", error.message);
 
     res.status(500).json({
       error: "Login failed"
@@ -281,7 +266,85 @@ app.post("/api/login", async (req, res) => {
 });
 
 /* =========================
-   CREATE SELLER
+   CATEGORIES
+========================= */
+
+app.get("/api/categories", async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT id, name
+       FROM categories
+       ORDER BY id`
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    res.status(500).json({
+      error: "Categories load failed"
+    });
+  }
+});
+
+/* =========================
+   PRODUCTS
+========================= */
+
+app.get("/api/products", async (req, res) => {
+  try {
+    const { category, search } = req.query;
+
+    let query = `
+      SELECT
+        p.id,
+        p.name,
+        p.description,
+        p.price,
+        p.stock,
+        p.image_url,
+        p.category_id,
+        c.name AS category,
+        p.seller_id
+      FROM products p
+      LEFT JOIN categories c
+        ON p.category_id = c.id
+      WHERE p.status = 'active'
+    `;
+
+    const values = [];
+
+    if (category) {
+      values.push(category);
+      query += ` AND p.category_id = $${values.length}`;
+    }
+
+    if (search) {
+      values.push(`%${search}%`);
+      query += `
+        AND (
+          p.name ILIKE $${values.length}
+          OR p.description ILIKE $${values.length}
+        )
+      `;
+    }
+
+    query += ` ORDER BY p.created_at DESC`;
+
+    const result =
+      await pool.query(query, values);
+
+    res.json(result.rows);
+
+  } catch (error) {
+    console.error("Products:", error.message);
+
+    res.status(500).json({
+      error: "Products load failed"
+    });
+  }
+});
+
+/* =========================
+   SELLER REGISTER
 ========================= */
 
 app.post("/api/sellers", async (req, res) => {
@@ -290,137 +353,331 @@ app.post("/api/sellers", async (req, res) => {
       ownerName,
       shopName,
       mobile,
-      city
+      city,
+      password
     } = req.body;
 
-    if (!ownerName || !shopName || !mobile) {
+    if (
+      !ownerName ||
+      !shopName ||
+      !mobile ||
+      !password
+    ) {
       return res.status(400).json({
-        error: "ownerName, shopName and mobile are required"
+        error:
+          "Owner name, shop name, mobile और password जरूरी है"
       });
     }
+
+    const passwordHash =
+      await bcrypt.hash(password, 10);
 
     const result = await pool.query(
       `
       INSERT INTO sellers
-      (owner_name, shop_name, mobile, city)
-      VALUES ($1, $2, $3, $4)
+      (owner_name, shop_name, mobile, city, password_hash)
+      VALUES ($1, $2, $3, $4, $5)
       RETURNING
         id,
         owner_name,
         shop_name,
         mobile,
         city,
-        status,
-        created_at
+        status
       `,
       [
         ownerName,
         shopName,
         mobile,
-        city || null
+        city || null,
+        passwordHash
       ]
     );
 
-    res.status(201).json(result.rows[0]);
+    res.status(201).json({
+      success: true,
+      seller: result.rows[0]
+    });
 
   } catch (error) {
-    console.error("Seller error:", error.message);
+    console.error("Seller:", error.message);
+
+    if (error.code === "23505") {
+      return res.status(409).json({
+        error: "यह seller mobile पहले से registered है"
+      });
+    }
 
     res.status(500).json({
-      error: "Failed to create seller"
+      error: "Seller registration failed"
     });
   }
 });
 
 /* =========================
-   ADD PRODUCT
+   SELLER LOGIN
 ========================= */
 
-app.post("/api/products", (req, res) => {
-  const {
-    name,
-    price,
-    stock,
-    sellerId,
-    category
-  } = req.body;
+app.post("/api/seller-login", async (req, res) => {
+  try {
+    const { mobile, password } = req.body;
 
-  if (!name || price == null || !sellerId) {
-    return res.status(400).json({
-      error: "name, price and sellerId are required"
+    const result = await pool.query(
+      `
+      SELECT
+        id,
+        owner_name,
+        shop_name,
+        mobile,
+        city,
+        password_hash,
+        status
+      FROM sellers
+      WHERE mobile = $1
+      `,
+      [mobile]
+    );
+
+    if (!result.rows.length) {
+      return res.status(401).json({
+        error: "Seller account नहीं मिला"
+      });
+    }
+
+    const seller = result.rows[0];
+
+    const match =
+      await bcrypt.compare(
+        password,
+        seller.password_hash
+      );
+
+    if (!match) {
+      return res.status(401).json({
+        error: "Mobile या password गलत है"
+      });
+    }
+
+    res.json({
+      success: true,
+      seller: {
+        id: seller.id,
+        ownerName: seller.owner_name,
+        shopName: seller.shop_name,
+        mobile: seller.mobile,
+        city: seller.city,
+        status: seller.status
+      }
+    });
+
+  } catch (error) {
+    console.error(
+      "Seller login:",
+      error.message
+    );
+
+    res.status(500).json({
+      error: "Seller login failed"
     });
   }
-
-  const product = {
-    id: products.length + 1,
-    name,
-    price: Number(price),
-    stock: Number(stock || 0),
-    sellerId: Number(sellerId),
-    category: category || "Other"
-  };
-
-  products.push(product);
-
-  res.status(201).json(product);
 });
+
+/* =========================
+   SELLER ADD PRODUCT
+========================= */
+
+app.post("/api/seller/products", async (req, res) => {
+  try {
+    const {
+      sellerId,
+      name,
+      description,
+      price,
+      stock,
+      imageUrl,
+      categoryId
+    } = req.body;
+
+    if (
+      !sellerId ||
+      !name ||
+      price == null ||
+      stock == null ||
+      !categoryId
+    ) {
+      return res.status(400).json({
+        error:
+          "Seller, product name, price, stock और category जरूरी है"
+      });
+    }
+
+    const sellerCheck =
+      await pool.query(
+        `
+        SELECT id, status
+        FROM sellers
+        WHERE id = $1
+        `,
+        [sellerId]
+      );
+
+    if (!sellerCheck.rows.length) {
+      return res.status(404).json({
+        error: "Seller नहीं मिला"
+      });
+    }
+
+    const result = await pool.query(
+      `
+      INSERT INTO products
+      (
+        name,
+        description,
+        price,
+        stock,
+        image_url,
+        category_id,
+        seller_id
+      )
+      VALUES ($1,$2,$3,$4,$5,$6,$7)
+      RETURNING *
+      `,
+      [
+        name,
+        description || null,
+        Number(price),
+        Number(stock),
+        imageUrl || null,
+        Number(categoryId),
+        Number(sellerId)
+      ]
+    );
+
+    res.status(201).json({
+      success: true,
+      product: result.rows[0]
+    });
+
+  } catch (error) {
+    console.error(
+      "Seller product:",
+      error.message
+    );
+
+    res.status(500).json({
+      error: "Product add failed"
+    });
+  }
+});
+
+/* =========================
+   GET SELLER PRODUCTS
+========================= */
+
+app.get(
+  "/api/seller/:sellerId/products",
+  async (req, res) => {
+
+    try {
+      const sellerId =
+        Number(req.params.sellerId);
+
+      const result = await pool.query(
+        `
+        SELECT
+          p.*,
+          c.name AS category
+        FROM products p
+        LEFT JOIN categories c
+          ON p.category_id = c.id
+        WHERE p.seller_id = $1
+        ORDER BY p.created_at DESC
+        `,
+        [sellerId]
+      );
+
+      res.json(result.rows);
+
+    } catch (error) {
+      res.status(500).json({
+        error: "Seller products load failed"
+      });
+    }
+  }
+);
 
 /* =========================
    ADD TO CART
 ========================= */
 
-app.post("/api/cart/:userId", (req, res) => {
+app.post("/api/cart/:userId", async (req, res) => {
   try {
-    const userId = Number(req.params.userId);
+    const userId =
+      Number(req.params.userId);
 
-    const {
-      productId,
-      quantity = 1
-    } = req.body;
+    const productId =
+      Number(req.body.productId);
 
-    const product = products.find(
-      p => p.id === Number(productId)
-    );
+    const quantity =
+      Number(req.body.quantity || 1);
 
-    if (!product) {
-      return res.status(404).json({
-        error: "Product not found"
-      });
-    }
-
-    if (product.stock <= 0) {
+    if (!userId || !productId || quantity < 1) {
       return res.status(400).json({
-        error: "Product out of stock"
+        error: "Invalid cart data"
       });
     }
 
-    if (!carts[userId]) {
-      carts[userId] = [];
+    const productResult =
+      await pool.query(
+        `
+        SELECT id, name, price, stock
+        FROM products
+        WHERE id = $1
+        AND status = 'active'
+        `,
+        [productId]
+      );
+
+    if (!productResult.rows.length) {
+      return res.status(404).json({
+        error: "Product नहीं मिला"
+      });
     }
 
-    const existing = carts[userId].find(
-      item => item.productId === Number(productId)
+    const product =
+      productResult.rows[0];
+
+    if (Number(product.stock) < quantity) {
+      return res.status(400).json({
+        error: "इतना stock उपलब्ध नहीं है"
+      });
+    }
+
+    await pool.query(
+      `
+      INSERT INTO carts
+      (user_id, product_id, quantity)
+      VALUES ($1,$2,$3)
+      ON CONFLICT (user_id, product_id)
+      DO UPDATE SET
+        quantity = carts.quantity + EXCLUDED.quantity
+      `,
+      [userId, productId, quantity]
     );
 
-    if (existing) {
-      existing.quantity += Number(quantity);
-    } else {
-      carts[userId].push({
-        productId: Number(productId),
-        quantity: Number(quantity)
-      });
-    }
-
-    res.status(201).json({
+    res.json({
       success: true,
-      cart: carts[userId]
+      message: "Product cart में add हो गया"
     });
 
   } catch (error) {
-    console.error("Add cart error:", error.message);
+    console.error(
+      "Add cart:",
+      error.message
+    );
 
     res.status(500).json({
-      error: "Failed to add product to cart"
+      error: "Cart में product add नहीं हुआ"
     });
   }
 });
@@ -429,189 +686,319 @@ app.post("/api/cart/:userId", (req, res) => {
    GET CART
 ========================= */
 
-app.get("/api/cart/:userId", (req, res) => {
+app.get("/api/cart/:userId", async (req, res) => {
   try {
-    const userId = Number(req.params.userId);
+    const userId =
+      Number(req.params.userId);
 
-    const userCart = carts[userId] || [];
+    const result = await pool.query(
+      `
+      SELECT
+        c.product_id AS "productId",
+        c.quantity,
+        p.name,
+        p.price,
+        p.stock,
+        p.image_url AS "imageUrl",
+        cat.name AS category
+      FROM carts c
+      JOIN products p
+        ON c.product_id = p.id
+      LEFT JOIN categories cat
+        ON p.category_id = cat.id
+      WHERE c.user_id = $1
+      ORDER BY c.id DESC
+      `,
+      [userId]
+    );
 
-    const result = userCart.map(item => {
-      const product = products.find(
-        p => p.id === Number(item.productId)
-      );
+    const cart = result.rows.map(item => ({
+      ...item,
+      price: Number(item.price),
+      quantity: Number(item.quantity),
+      stock: Number(item.stock),
+      itemTotal:
+        Number(item.price) *
+        Number(item.quantity)
+    }));
 
-      if (!product) {
-        return null;
-      }
+    const total = cart.reduce(
+      (sum, item) => sum + item.itemTotal,
+      0
+    );
 
-      return {
-        productId: product.id,
-        name: product.name,
-        price: Number(product.price),
-        quantity: Number(item.quantity),
-        stock: product.stock,
-        category: product.category
-      };
-    }).filter(Boolean);
-
-    res.json(result);
+    res.json({
+      items: cart,
+      total
+    });
 
   } catch (error) {
-    console.error("Get cart error:", error.message);
+    console.error(
+      "Get cart:",
+      error.message
+    );
 
     res.status(500).json({
-      error: "Failed to load cart"
+      error: "Cart load failed"
     });
   }
 });
 
 /* =========================
-   REMOVE FROM CART
+   UPDATE CART QUANTITY
 ========================= */
 
-app.delete(
+app.put(
   "/api/cart/:userId/:productId",
-  (req, res) => {
+  async (req, res) => {
 
     try {
-      const userId = Number(req.params.userId);
-      const productId = Number(req.params.productId);
+      const userId =
+        Number(req.params.userId);
 
-      if (!carts[userId]) {
-        return res.json([]);
+      const productId =
+        Number(req.params.productId);
+
+      const quantity =
+        Number(req.body.quantity);
+
+      if (quantity < 1) {
+        return res.status(400).json({
+          error: "Quantity कम से कम 1 होनी चाहिए"
+        });
       }
 
-      carts[userId] = carts[userId].filter(
-        item => item.productId !== productId
+      const product =
+        await pool.query(
+          `
+          SELECT stock
+          FROM products
+          WHERE id = $1
+          `,
+          [productId]
+        );
+
+      if (!product.rows.length) {
+        return res.status(404).json({
+          error: "Product नहीं मिला"
+        });
+      }
+
+      if (
+        quantity >
+        Number(product.rows[0].stock)
+      ) {
+        return res.status(400).json({
+          error: "Available stock से ज्यादा quantity नहीं हो सकती"
+        });
+      }
+
+      await pool.query(
+        `
+        UPDATE carts
+        SET quantity = $1
+        WHERE user_id = $2
+        AND product_id = $3
+        `,
+        [quantity, userId, productId]
       );
 
-      res.json(carts[userId]);
+      res.json({
+        success: true
+      });
 
     } catch (error) {
-      console.error(
-        "Remove cart error:",
-        error.message
-      );
-
       res.status(500).json({
-        error: "Failed to remove cart item"
+        error: "Cart update failed"
       });
     }
   }
 );
 
 /* =========================
-   CREATE ORDER
+   REMOVE CART ITEM
 ========================= */
 
-app.post("/api/orders", (req, res) => {
+app.delete(
+  "/api/cart/:userId/:productId",
+  async (req, res) => {
+
+    try {
+      const userId =
+        Number(req.params.userId);
+
+      const productId =
+        Number(req.params.productId);
+
+      await pool.query(
+        `
+        DELETE FROM carts
+        WHERE user_id = $1
+        AND product_id = $2
+        `,
+        [userId, productId]
+      );
+
+      res.json({
+        success: true,
+        message: "Product cart से हट गया"
+      });
+
+    } catch (error) {
+      res.status(500).json({
+        error: "Cart item remove failed"
+      });
+    }
+  }
+);
+
+/* =========================
+   PLACE ORDER
+========================= */
+
+app.post("/api/orders", async (req, res) => {
+  const client = await pool.connect();
+
   try {
     const {
       userId,
-      items,
       address,
       paymentMethod = "COD"
     } = req.body;
 
-    if (
-      !userId ||
-      !items ||
-      !items.length ||
-      !address
-    ) {
+    if (!userId || !address) {
       return res.status(400).json({
-        error: "userId, items and address are required"
+        error: "User और delivery address जरूरी है"
+      });
+    }
+
+    await client.query("BEGIN");
+
+    const cartResult =
+      await client.query(
+        `
+        SELECT
+          c.product_id,
+          c.quantity,
+          p.name,
+          p.price,
+          p.stock
+        FROM carts c
+        JOIN products p
+          ON c.product_id = p.id
+        WHERE c.user_id = $1
+        FOR UPDATE
+        `,
+        [userId]
+      );
+
+    if (!cartResult.rows.length) {
+      await client.query("ROLLBACK");
+
+      return res.status(400).json({
+        error: "Cart empty है"
       });
     }
 
     let total = 0;
 
-    for (const item of items) {
-      const product = products.find(
-        p => p.id === Number(item.productId)
-      );
+    for (const item of cartResult.rows) {
 
-      if (!product) {
+      if (
+        Number(item.quantity) >
+        Number(item.stock)
+      ) {
+        await client.query("ROLLBACK");
+
         return res.status(400).json({
           error:
-            `product ${item.productId} not found`
+            `${item.name} का पर्याप्त stock नहीं है`
         });
       }
 
       total +=
-        Number(product.price) *
-        Number(item.quantity || 1);
+        Number(item.price) *
+        Number(item.quantity);
     }
 
-    const order = {
-      id: orders.length + 1001,
-      userId: Number(userId),
-      items,
-      address,
-      paymentMethod,
-      total,
-      status: "placed",
-      createdAt: new Date().toISOString()
-    };
+    const orderResult =
+      await client.query(
+        `
+        INSERT INTO orders
+        (user_id, address, payment_method, total)
+        VALUES ($1,$2,$3,$4)
+        RETURNING *
+        `,
+        [
+          userId,
+          address,
+          paymentMethod,
+          total
+        ]
+      );
 
-    orders.push(order);
+    const order =
+      orderResult.rows[0];
 
-    res.status(201).json(order);
+    for (const item of cartResult.rows) {
+
+      await client.query(
+        `
+        INSERT INTO order_items
+        (
+          order_id,
+          product_id,
+          product_name,
+          price,
+          quantity
+        )
+        VALUES ($1,$2,$3,$4,$5)
+        `,
+        [
+          order.id,
+          item.product_id,
+          item.name,
+          item.price,
+          item.quantity
+        ]
+      );
+
+      await client.query(
+        `
+        UPDATE products
+        SET stock = stock - $1
+        WHERE id = $2
+        `,
+        [
+          item.quantity,
+          item.product_id
+        ]
+      );
+    }
+
+    await client.query(
+      `
+      DELETE FROM carts
+      WHERE user_id = $1
+      `,
+      [userId]
+    );
+
+    await client.query("COMMIT");
+
+    res.status(201).json({
+      success: true,
+      order
+    });
 
   } catch (error) {
-    console.error("Order error:", error.message);
 
-    res.status(500).json({
-      error: "Failed to create order"
-    });
-  }
-});
+    await client.query("ROLLBACK");
 
-/* =========================
-   ADMIN SUMMARY
-========================= */
-
-app.get("/api/admin/summary", async (req, res) => {
-  try {
-    const usersResult =
-      await pool.query("SELECT COUNT(*) FROM users");
-
-    const sellersResult =
-      await pool.query("SELECT COUNT(*) FROM sellers");
-
-    res.json({
-      owner: "Akshay Kumar Sahu",
-      sellers: Number(sellersResult.rows[0].count),
-      customers: Number(usersResult.rows[0].count),
-      products: products.length,
-      orders: orders.length,
-      commissionRate: 0.08
-    });
-
-  } catch (error) {
     console.error(
-      "Admin summary error:",
+      "Order:",
       error.message
     );
 
     res.status(500).json({
-      error: "Failed to load admin summary"
-    });
-  }
-});
-
-/* =========================
-   START SERVER
-========================= */
-
-async function startServer() {
-  await initDatabase();
-
-  app.listen(PORT, () => {
-    console.log(
-      `DesiMart API running on port ${PORT}`
-    );
-  });
-}
-
-startServer();
+      er
